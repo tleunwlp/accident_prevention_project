@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Monitoring Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #header {
+            background-color: #111;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar {
+            background-color: #222;
+            padding: 10px 20px;
+            text-align: right;
+            width: calc(100% - 20px);
+            position: fixed;
+            top: 50px;
+            z-index: 9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 18px;
+        }
+        #navbar a.active {
+            color: #1E90FF;
+        }
+        #dashboard {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            padding: 20px;
+            margin-top: 100px;
+            justify-content: space-between;
+            height: calc(100vh - 150px);  /* Header, Navbar and log height */
+        }
+        #cctv-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: calc(100% - 100px);  /* Leave space for the log area */
+        }
+        .cctv-image {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .cctv-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;  /* Adjust to prevent image scaling */
+        }
+        .warning-container, .warning-container-yellow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 0, 0, 0.7);
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 5px 7px rgba(0, 0, 0, 0.2);
+            display: none; /* Initially hidden */
+        }
+        .warning-container-yellow {
+            background-color: rgba(255, 255, 0, 0.7);
+        }
+        .warning-container img, .warning-container-yellow img {
+            width: 40px;
+            height: 40px;
+        }
+        #log-container {
+            display: flex;
+            justify-content: space-around;
+            height: 90px;
+            background-color: #222;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            margin-top: 10px;
+        }
+        #log-warning, #log-notice {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0 5px;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #333;
+            display: none; /* Initially hidden */
+        }
+        #log-warning p, #log-notice p {
+            margin: 2px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        #log-warning p {
+            color: red;
+        }
+        #log-notice p {
+            color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        CCTV Monitoring Dashboard
+    </div>
+    <div id="navbar">
+        <a href="/cctv" class="nav-link">CCTV 관제</a>
+        <a href="/drone" class="nav-link nav-link-drone">드론 관제</a>
+    </div>
+    <div id="dashboard">
+        <div id="cctv-grid">
+            <div class="cctv-image">
+                <img src="{{ url_for('static', filename='images/img1.png') }}" alt="CCTV Image 1" onclick="location.href='/cctv'">
+                <div class="warning-container">
+                    <img src="{{ url_for('static', filename='images/warning.jpeg') }}" alt="Warning">
+                </div>
+            </div>
+            <div class="cctv-image">
+                <img src="{{ url_for('static', filename='images/img2.png') }}" alt="CCTV Image 2">
+                <div class="warning-container warning-container-yellow">
+                    <img src="{{ url_for('static', filename='images/warning2.jpeg') }}" alt="Warning">
+                </div>
+            </div>
+            <div class="cctv-image"><img src="{{ url_for('static', filename='images/img3.png') }}" alt="CCTV Image 3"></div>
+            <div class="cctv-image"><img src="{{ url_for('static', filename='images/img4.png') }}" alt="CCTV Image 4"></div>
+            <div class="cctv-image"><img src="{{ url_for('static', filename='images/img5.png') }}" alt="CCTV Image 5"></div>
+            <div class="cctv-image"><img src="{{ url_for('static', filename='images/img6.png') }}" alt="CCTV Image 6"></div>
+        </div>
+        <div id="log-container">
+            <div id="log-warning">
+                <p>대룡 CCTV-4 위험 경고 발생!</p>
+            </div>
+            <div id="log-notice">
+                <p>옥천1터널 CCTV-3 주의 경고 발생!</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var navLinks = document.querySelectorAll('#navbar a');
+            var currentPath = window.location.pathname;
+            navLinks.forEach(function(navLink) {
+                navLink.classList.remove('active');
+                if (navLink.getAttribute('href') === currentPath) {
+                    navLink.classList.add('active');
+                }
+            });
+
+            setTimeout(function() {
+                console.log('Showing warning containers and log entries.');
+                document.querySelector('.warning-container').style.display = 'block';
+                document.getElementById('log-warning').style.display = 'block';
+            }, 4000);
+
+            setTimeout(function() {
+                document.querySelector('.warning-container-yellow').style.display = 'block';
+                document.getElementById('log-notice').style.display = 'block';
+            }, 6000);
+        });
+    </script>
+</body>
+</html>

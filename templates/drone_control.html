@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Monitoring Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #header {
+            background-color: #111;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar {
+            background-color: #222;
+            padding: 10px 20px;
+            text-align: right;
+            width: calc(100% - 20px); 
+            position: fixed;
+            top: 50px;
+            z-index: 9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 18px;
+        }
+        #navbar a.active {
+            color: #1E90FF;
+        }
+        #dashboard {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            margin-top: 100px;
+        }
+        #main-content {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 10px;
+            margin-right: 20px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+        }
+        #drone-container {
+            width: 100%;
+            height: 48%;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .video-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #gps-container {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 25px; 
+        }
+        #gps-container img {
+            width: 50%;
+            height: auto; 
+            max-height: 150px;
+        }
+        #battery-status-container {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 10px;
+            margin-top: 15px;
+        }
+        #battery-status {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+        }
+        #battery-circle {
+            width: 150px; 
+            height: 150px;
+            border-radius: 50%;
+            border: 10px solid #00FF00;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
+        #battery-time-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        #bettery-time-label {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        #battery-time-value { 
+            font-size: 25px;
+            color: #fff;
+            font-weight: bold; 
+            text-shadow: 1px 1px 2px black;
+            margin-top: 10px;
+        }
+        #battery-status span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: white;
+        }
+        #side-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 28%;
+            height: 75%;
+            padding: 0px;
+            gap: 10px;
+        }
+        .info-box, .button-box, .log-box, .status-box, .drone-list-box, .voice-message-box {
+            width: 100%;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        .drone-list-box, .voice-message-box {
+            flex-grow: 1;
+        }
+        .drone-list-box {
+            height: auto;
+            flex-grow: 0;
+            padding: 10px;
+        }
+        .status-box {
+            height: calc(33.33% - 20px);
+        }
+        .info-box h3, .log-box h3, status-box h3 .drone-list-box h3, .voice-message-box h3 {
+            margin: 0 0 10px;
+            color: #fff;
+        }
+        .button-box {
+            flex-direction: row;
+            display: flex;
+            justify-content: center;
+            width:100%;
+            gap: 5px;
+            height: auto;
+        }
+        .button-box button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .button-box button:hover {
+            background-color: #555;
+        }
+        .log-box {
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        .log-entry {
+            width: 100%;
+            padding: 5px 10px;
+            border-bottom: 1px solid #444;
+            color: #cfd2d6;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        #drone-status, #drone-control {
+            font-weight: bold;
+        }
+        .drone-list {
+            width: 100%;
+            color: #fff; 
+            border-collapse: collapse;
+        }
+        .drone-list th, .drone-list td {
+            padding: 10px;
+            text-align: left;
+        }
+        .drone-list th {
+            background-color: #333;
+        }
+        .drone-list th:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+        .drone-status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-active {
+            background-color: green;
+        }
+        .status-inactive {
+            background-color: red;
+        }
+        .voice-message-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 10px;
+            overflow: auto;
+            height: auto;
+            flex-grow: 1;
+        }
+        .voice-message-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .voice-message-box h3 {
+            margin: 0;
+            color: #fff;
+        }
+        .voice-message-box .message-button {
+            background-color: #444;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .voice-message-box .message-button:hover {
+            background-color: #555;
+        }
+        .voice-message-box .message-list {
+            flex-grow: 1;
+            overflow: auto;
+            margin-top: 0;
+        }
+        .voice-message-box .message-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #444;
+        }
+        .voice-message-box .message-item:last-child {
+            border-bottom: none;
+        }
+        .voice-message-box .message-text {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .voice-message-box .message-button {
+            background-color: #444;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .voice-message-box .message-button:hover {
+            background-color: #555;
+        }
+        .voice-message-box .input-container {
+            flex-shrink: 0;
+            display: flex;
+            width: 100%;
+        }
+        .voice-message-box .input-container input {
+            flex: 1;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            margin-right: 10px;
+        }
+        .voice-message-box .input-container button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .voice-message-box .input-container button:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        Drone Monitoring Dashboard
+    </div>
+    <div id="navbar">
+        <a href="/cctv" class="nav-link">CCTV 관제</a>
+        <a href="/drone" class="nav-link nav-link-drone">드론 관제</a>
+    </div>
+    <div id="dashboard">
+        <div id="main-content">
+            <div id="drone-container" class="video-container">
+                <video controls autoplay>
+                    <source src="{{ url_for('static', filename='videos/drone01.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div id="gps-container">
+                <img src="{{ url_for('static', filename='images/gps.png') }}" alt="GPS Image">
+                <div id="battery-status-container">
+                    <div id="battery-status">
+                        <svg width="100" height="100" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" stroke="#333" stroke-width="10" fill="none" />
+                            <circle cx="50" cy="50" r="45" stroke="#00FF00" stroke-width="10" fill="none" stroke-dasharray="282.74" stroke-dashoffset="64.99" />
+                            <text x="50" y="55" text-anchor="middle" font-size="20" fill="#fff" font-weight="bold">77%</text>
+                        </svg>
+                        <div id="battery-time-container">
+                            <div id="battery-time-label">남은 시간</div>
+                            <div id="battery-time-value">1시간 20분</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="side-panel">
+            <div class="drone-list-box">
+                <h3>드론 관리</h3>
+                <table class="drone-list">
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>영업소</th>
+                            <th>운행상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0308-D</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-active"></span></td>
+                        </tr>
+                        <tr>
+                            <td>0620-G</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-active"></span></td>
+                        </tr>
+                        <tr>
+                            <td>0714-G</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-inactive"></span></td>
+                        </tr>
+                        <tr>
+                            <td>1007-B</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-inactive"></span></td>
+                        </tr>
+                        <tr>
+                            <td>1113-B</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-active"></span></td>
+                        </tr>
+                        <tr>
+                            <td>1214-D</td>
+                            <td>영동 영업소</td>
+                            <td><span class="drone-status-dot status-inactive"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="voice-message-box">
+                <div class="voice-message-header">
+                    <h3>음성 메시지</h3>
+                    <button class="message-button">경고음</button>
+                </div>
+                <ul class="message-list">
+                    <li class="message-item">
+                        <span class="message-text">200M 내 사고 차량 발생</span>
+                        <button class="message-button">▶</button>
+                    </li>
+                    <li class="message-item">
+                        <span class="message-text">사고 발생 없으니 감속이 권장됩니다</span>
+                        <button class="message-button">▶</button>
+                    </li>
+                </ul>
+                <div class="input-container">
+                    <input type="text" placeholder="알림 메시지를 입력하세요">
+                    <button>전송</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function startDrone() {
+            // 드론을 시작하는 기능 구현
+            document.getElementById('drone-status').textContent = 'Active';
+        }
+
+        function stopDrone() {
+            // 드론을 멈추는 기능 구현
+            document.getElementById('drone-status').textContent = 'Idle';
+        }
+
+        // 실시간 경고 로그 추가 (예시)
+        var socket = io();
+        socket.on('warning', function(data) {
+            var alertLog = document.getElementById('alert-log');
+            var logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = new Date().toLocaleTimeString() + ': ' + data.message;
+            alertLog.prepend(logEntry);
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var navLinks = document.querySelectorAll('#navbar a');
+            var currentPath = window.location.pathname;
+            navLinks.forEach(function(navLink) {
+                navLink.classList.remove('active');
+                if (navLink.getAttribute('href') === currentPath) {
+                    navLink.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

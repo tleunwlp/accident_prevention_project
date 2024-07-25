@@ -1,0 +1,7 @@
+.idea
+sesac.db
+*.pyc
+__pycache__
+migrations
+logs
+.env

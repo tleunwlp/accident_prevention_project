@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Monitoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #header {
+            background-color: #111;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar {
+            background-color: #222;
+            padding: 10px 20px;
+            text-align: right;
+            width: calc(100% - 20px);
+            position: fixed;
+            top: 50px;
+            z-index: 9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 18px;
+        }
+        #navbar a.active {
+            color: #1E90FF;
+        }
+        #dashboard {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            margin-top: 100px;
+            flex-direction: row;
+            justify-content: space-between;
+            height: calc(100vh - 120px);  /* Header and Navbar height */
+        }
+        #main-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 10px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 70%;
+            height: 100%;
+            overflow-y: auto;
+        }
+        #video-container {
+            width: 100%;
+            max-width: 100%;
+            height: 68%;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        #video-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;  /* Adjust to prevent image scaling */
+        }
+        #warning-container {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #warning-container img {
+            width: 50px;
+            height: 50px;
+        }
+        #cctv-images {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;  /* Reduce the gap */
+            width: 100%;
+            margin-top: 10px;
+        }
+        .cctv-image {
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .cctv-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;  /* Adjust to prevent image scaling */
+        }
+        #side-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 28%;
+            height: 100%;
+            padding: 0px;
+            gap: 20px; /* Add gap between sections */
+        }
+        .info-box, .button-box, .log-box, .status-box {
+            width: 100%;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: calc(33.33% - 20px); /* Adjust height to fit within the panel */
+        }
+        .status-box {
+            height: calc(33.33% - 20px);
+        }
+        .info-box h3, .log-box h3, .status-box h3 {
+            margin: 0 0 10px;
+            color: #fff;
+        }
+        .button-box {
+            flex-direction: row;
+            display: flex;
+            justify-content: center;
+            width:100%;
+            gap: 5px;
+            height: auto;
+        }
+        .button-box button {
+            width: 48%;
+            padding: 10px;
+            border: none;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            flex: 1; /* Make buttons fill the available space */
+            margin: 5px 0;
+        }
+        .button-box button:hover {
+            background-color: #555;
+        }
+        .log-box h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #fff;
+        }
+        .log-box {
+            height: 200px;  
+            overflow-y: auto;
+            width: 100%;
+        }
+        .log-entry {
+            width: 100%;
+            padding: 5px 10px;
+            border-bottom: 1px solid #444;
+            color: #cfd2d6;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 5px 0;
+            width: 30%; /* 가로 배열 시 크기 조정 */
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-radius: 5px;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        .status-item span {
+            margin-left: 10px;
+        }
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-top: 5px;
+        }
+        .status-indicator {
+            margin-top: 40px;
+        }
+        .status-indicator {
+            margin-top: 40px;
+        }
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .status-box {
+            height: auto;
+            width: 100%;
+        }
+        .status-box h3 {
+            margin-bottom: 10px;
+            font-size:18px;
+            color: #fff;
+        }
+        .status-green {
+            background-color: #00FF00;
+        }
+        .status-red {
+            background-color: #FF0000;
+        }
+        .info-box h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        CCTV Monitoring Dashboard
+    </div>
+    <div id="navbar">
+        <a href="/cctv">CCTV 관제</a>
+        <a href="/drone" class="nav-link-drone">드론 관제</a>
+    </div>
+    <div id="dashboard">
+        <div id="main-content">
+            <div id="video-container">
+                <img src="/video" alt="CCTV Video">
+                <div id="warning-container">
+                    <img src="{{ image_file }}">
+                </div>
+            </div>
+            <div id="cctv-images">
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img1.png') }}" alt="CCTV Image 1"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img2.png') }}" alt="CCTV Image 2"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img3.png') }}" alt="CCTV Image 3"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img4.png') }}" alt="CCTV Image 4"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img5.png') }}" alt="CCTV Image 5"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img6.png') }}" alt="CCTV Image 6"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img7.png') }}" alt="CCTV Image 7"></div>
+                <div class="cctv-image"><img src="{{ url_for('static', filename='images/img8.png') }}" alt="CCTV Image 8"></div>
+            </div>
+        </div>
+        <div id="side-panel">
+            <div class="log-box">
+                <h3>Real-time Alerts</h3>
+                <div id="alert-log">
+                    <!-- 실시간 경고 로그가 여기에 표시됩니다 -->
+                </div>
+            </div>
+            <div class="button-box">
+                <button onclick="drone()">드론 출동</button>
+                <button onclick="cctvPerson()">관제 요원 출동</button>
+            </div>
+            <div class="status-box">
+                <h3>현황</h3>
+                <div class="status-container">
+                    <div class="status-item">
+                        <span>경찰신고</span>
+                        <div class="status-indicator status-green"></div>
+                    </div>
+                    <div class="status-item">
+                        <span>드론출동</span>
+                        <div class="status-indicator status-red"></div>
+                    </div>
+                    <div class="status-item">
+                        <span>메시지</span>
+                        <div class="status-indicator status-green"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var socket = io();
+        socket.on('warning', function(data) {
+            var warningContainer = document.getElementById('warning-container');
+            warningContainer.style.display = 'block';
+            setTimeout(function() {
+                warningContainer.style.display = 'none';
+            }, 7000);  // 경고 이미지를 7초 동안 표시
+
+            var alertLog = document.getElementById('alert-log');
+            var logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = new Date().toLocaleTimeString() + ': ' + data.message;
+            alertLog.prepend(logEntry);
+        });
+
+        function drone() {
+            alert("드론 출동!");
+        }
+
+        function cctvPerson() {
+            alert("관제 요원 출동!");
+        }
+
+        setInterval(function() {
+            document.getElementById('cpu-usage').textContent = Math.floor(Math.random() * 100) + '%';
+            document.getElementById('memory-usage').textContent = Math.floor(Math.random() * 100) + '%';
+        }, 1000);
+
+        // 네비게이션 바 클릭 시 색상 변경 및 현재 페이지 유지
+        document.addEventListener('DOMContentLoaded', function() {
+            var navLinks = document.querySelectorAll('#navbar a');
+            navLinks.forEach(function(navLink) {
+                navLink.addEventListener('click', function() {
+                    navLinks.forEach(function(link) {
+                        link.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+
+            // 현재 페이지 URL과 일치하는 링크에 'active' 클래스 추가
+            var currentPath = window.location.pathname;
+            navLinks.forEach(function(navLink) {
+                if (navLink.getAttribute('href') === currentPath) {
+                    navLink.classList.add('active');
+                }
+            });
+
+            // 드론 관제 페이지 활성화
+            if (currentPath.includes('/drone')) {
+                document.querySelector('.nav-link-drone').classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>
